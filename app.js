@@ -46,7 +46,7 @@
 //     },
 //   };
 //   return {
-//     // public service ээр return хийгдэж байгаач доор дуудагдахад доторхи үйлдлүүд гүйцэтгэгдэж массивт утга орно return нь зөвхөн утга буцаах биш IIFE-руу хандаж үйлдэл гүйцэтгэх орц гарц болно.
+//
 //     addItem: function (type, desc, val) {
 //       var item, id;
 
@@ -60,7 +60,7 @@
 //       } else {
 //         item = new Expense(id, desc, val);
 //       }
-//       data.items[type].push(item); // орлого уу зарлага уу ялгаад массив руу обектийг нэмнэ
+//       data.items[type].push(item);
 //     },
 //     seeData: function () {
 //       return data;
@@ -101,7 +101,7 @@
 //   };
 // })(uiController, financeController);
 
-// appController.init(); // appController- оос эхлэх функцийг дуудаж байна
+// appController.init();
 
 var uiController = (function () {
   var DOMstrings = {
@@ -122,6 +122,26 @@ var uiController = (function () {
 
     getDOMstrings: function () {
       return DOMstrings;
+    },
+    addListItem: function (item, type) {
+      var html, list;
+      // 1. орлого зарлагын элментийг агуулсан html бэлдэнэ.
+      if (type === "inc") {
+        list = ".income__list";
+        html =
+          '<div class="item clearfix" id="income-%id%"><div class="item__description">##DESC$</div><div class="right clearfix"><div class="item__value">+ $%$value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
+      } else {
+        list = ".expenses__list";
+        html =
+          '<div class="item clearfix" id="expense-%id%"><div class="item__description">##DESC$</div><div class="right clearfix"><div class="item__value">- $%$value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
+      }
+      // 2. орлого зарлагын утгуудыг replace ашиглан өөрчилж өгнө.
+      html = html.replace("%id%", item.id);
+      html = html.replace("##DESC$", item.description);
+      html = html.replace("$%$value%", item.value);
+
+      // бэлтгэсэн html ээ дом-руу хийж өгнө
+      document.querySelector(list).insertAdjacentHTML("beforeend", html);
     },
   };
 })();
@@ -155,6 +175,7 @@ var financeController = (function () {
   };
 
   return {
+    // public service ээр return хийгдэж байгаач доор дуудагдахад доторхи үйлдлүүд гүйцэтгэгдэж массивт утга орно return нь зөвхөн утга буцаах биш IIFE-руу хандаж үйлдэл гүйцэтгэх орц гарц болно.
     addItem: function (type, desc, val) {
       var item, id;
 
@@ -169,7 +190,8 @@ var financeController = (function () {
         item = new Expense(id, desc, val);
       }
 
-      data.items[type].push(item);
+      data.items[type].push(item); // орлого уу зарлага уу ялгаад массив руу обектийг нэмнэ
+      return item;
     },
 
     seeData: function () {
@@ -182,9 +204,18 @@ var appController = (function (uiController, financeController) {
   var ctrlAddItem = function () {
     var input = uiController.getInput();
 
-    financeController.addItem(input.type, input.description, input.value);
+    var item = financeController.addItem(
+      input.type,
+      input.description,
+      input.value
+    );
+    // 2. Олж авсан өгөгдлүүдээ санхүүгийн конт- руу дамжуулж тэнд хадгална.
+    //     // 3. Олж авсан өгөгдлүүдээ вебийн тохирох хэсэгт гаргана.
+    uiController.addListItem(item, input.type);
   };
 
+  //     // 4. Төсөвийг тооцно
+  //     // 5. Эцэсийн үлдэгдэл тооцоог дэлгэцэнд гаргана.
   var setupEventListeners = function () {
     var DOM = uiController.getDOMstrings();
 
@@ -207,5 +238,5 @@ var appController = (function (uiController, financeController) {
   };
 })(uiController, financeController);
 
-appController.init();
+appController.init(); // appController- оос эхлэх функцийг дуудаж байна
 // өөрийн код ажиллахгүй шууд хуулж тавьсан...
