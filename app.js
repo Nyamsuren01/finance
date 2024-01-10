@@ -7,6 +7,11 @@ var uiController = (function () {
     addBtn: ".add__btn",
     incomeList: ".income__list",
     expenseList: ".expenses__list",
+    tusuvLabel: ".budget__value",
+    incomeLabel: ".budget__income--value",
+    expenseLabel: ".budget__expenses--value",
+    persentageLabel: ".budget__expenses--percentage",
+    containerDiv: ".container",
   };
 
   return {
@@ -27,11 +32,11 @@ var uiController = (function () {
       if (type === "inc") {
         list = DOMstrings.incomeList;
         html =
-          '<div class="item clearfix" id="income-%id%"><div class="item__description">##DESC$</div><div class="right clearfix"><div class="item__value">+ $%$value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
+          '<div class="item clearfix" id="inc-%id%"><div class="item__description">##DESC$</div><div class="right clearfix"><div class="item__value">+ $%$value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
       } else {
         list = DOMstrings.expenseList;
         html =
-          '<div class="item clearfix" id="expense-%id%"><div class="item__description">##DESC$</div><div class="right clearfix"><div class="item__value">- $%$value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
+          '<div class="item clearfix" id="exp-%id%"><div class="item__description">##DESC$</div><div class="right clearfix"><div class="item__value">- $%$value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>';
       }
       // 2. орлого зарлагын утгуудыг replace ашиглан өөрчилж өгнө.
       html = html.replace("%id%", item.id);
@@ -56,6 +61,25 @@ var uiController = (function () {
       // for (var i = 0; i < fieldsArr.length; i++) {
       //   fieldsArr[i].value = "";
       // }
+    },
+    tusuviigUzuuleh: function (tusuv) {
+      document.querySelector(DOMstrings.tusuvLabel).textContent = tusuv.tusuv;
+      document.querySelector(DOMstrings.incomeLabel).textContent =
+        tusuv.totalInc;
+      document.querySelector(DOMstrings.expenseLabel).textContent =
+        tusuv.totalExp;
+      if (tusuv.huvi !== 0) {
+        document.querySelector(DOMstrings.persentageLabel).textContent =
+          tusuv.huvi + "%";
+      } else {
+        document.querySelector(DOMstrings.persentageLabel).textContent =
+          tusuv.huvi;
+      }
+    },
+    deleteListItem: function (id) {
+      // ustgadag service ni ...ugugdliin sangui tul dom oos bas delgetsees bas ustgaj ugnu uuniigee door duudna
+      var el = document.getElementById(id);
+      el.parentNode.removeChild(el);
     },
   };
 })();
@@ -115,6 +139,16 @@ var financeController = (function () {
         totalExp: data.totals.exp,
       };
     },
+    deleteItem: function (type, id) {
+      var ids = data.items[type].map(function (el) {
+        return el.id;
+      });
+      var index = ids.indexOf(id);
+      if (index !== -1) {
+        data.items[type].splice(index, 1);
+      }
+    },
+
     addItem: function (type, desc, val) {
       var item, id;
 
@@ -143,7 +177,7 @@ var appController = (function (uiController, financeController) {
   var ctrlAddItem = function () {
     var input = uiController.getInput();
 
-    if (input.description !== "" && input.value !== "") {
+    if (input.description !== "" && input.value !== "" && !isNaN(input.value)) {
       var item = financeController.addItem(
         input.type,
         input.description,
@@ -159,7 +193,8 @@ var appController = (function (uiController, financeController) {
     //     // 5. Эцэсийн үлдэгдэл
     var tusuv = financeController.tusuviigAvah();
     // Төсөвийн тооцоог дэлгэцэнд гаргана.
-    console.log(tusuv);
+    uiController.tusuviigUzuuleh(tusuv);
+    // console.log();
   };
 
   var setupEventListeners = function () {
@@ -174,11 +209,35 @@ var appController = (function (uiController, financeController) {
         ctrlAddItem();
       }
     });
+    document
+      .querySelector(DOM.containerDiv)
+      .addEventListener("click", function (event) {
+        var id = event.target.parentNode.parentNode.parentNode.parentNode.id;
+        //console.log(id);
+        //
+        if (id) {
+          var arr = id.split("-");
+          var type = arr[0];
+          var itemId = parseInt(arr[1]);
+          //console.log(type + " " + itemId);
+          // 1. sanhuugiin modulaas type, id ashgilaad ustganga
+          financeController.deleteItem(type, itemId);
+          // 2. Delgets deerees elmentiig ustgana
+          uiController.deleteListItem(id);
+          // 3. Uldegdel tootsoog shinechilj haruulna
+        }
+      });
   };
 
   return {
     init: function () {
       console.log("Application started...");
+      uiController.tusuviigUzuuleh({
+        tusuv: 0,
+        huvi: 0,
+        totalInc: 0,
+        totalExp: 0,
+      });
       setupEventListeners();
     },
   };
