@@ -12,8 +12,31 @@ var uiController = (function () {
     expenseLabel: ".budget__expenses--value",
     persentageLabel: ".budget__expenses--percentage",
     containerDiv: ".container",
+    expensePrecentageLabel: ".item__percentage",
+    dateLabel: ".budget__title--month",
   };
 
+  var nodeListForeach = function (list, callback) {
+    for (var i = 0; i < list.length; i++) callback(list[i], i);
+  };
+  var formatMoney = function (too, type) {
+    too = " " + too;
+    var x = too.split("").reverse().join("");
+    var y = "";
+    var count = 1;
+    for (var i = 0; i < x.length; i++) {
+      y = y + x[i];
+      if (count % 3 === 0) {
+        y = y + ",";
+        count++;
+      }
+      var z = y.split("").reverse().join("");
+      if (z[0] === ",") {
+        z = z.substring(1, z.length - 1);
+      }
+    }
+    return z;
+  };
   return {
     getInput: function () {
       return {
@@ -21,6 +44,27 @@ var uiController = (function () {
         description: document.querySelector(DOMstrings.inputDescription).value,
         value: parseInt(document.querySelector(DOMstrings.inputValue).value),
       };
+    },
+    displayDate: function () {
+      var unuudur = new Date();
+      document.querySelector(DOMstrings.dateLabel).textContent =
+        unuudur.getFullYear() +
+        " оны " +
+        unuudur.getMonth() +
+        1 +
+        " сарын өрхийн санхүү";
+      //console.log(unuudur.getMonth() + 1);
+    },
+
+    displayPrecentages: function (allPersentages) {
+      // Зарлагын node листийг олох
+      var elements = document.querySelectorAll(
+        DOMstrings.expensePrecentageLabel
+      );
+      // элмент бүрийн хувьд хувийг массиваас авч шивж оруулах
+      nodeListForeach(elements, function (el, index) {
+        el.textContent = allPersentages[index];
+      });
     },
 
     getDOMstrings: function () {
@@ -41,7 +85,7 @@ var uiController = (function () {
       // 2. орлого зарлагын утгуудыг replace ашиглан өөрчилж өгнө.
       html = html.replace("%id%", item.id);
       html = html.replace("##DESC$", item.description);
-      html = html.replace("$%$value%", item.value);
+      html = html.replace("$%$value%", formatMoney(item.value, type));
 
       // бэлтгэсэн html ээ дом-руу хийж өгнө
       document.querySelector(list).insertAdjacentHTML("beforeend", html);
@@ -63,9 +107,17 @@ var uiController = (function () {
       // }
     },
     tusuviigUzuuleh: function (tusuv) {
-      document.querySelector(DOMstrings.tusuvLabel).textContent = tusuv.tusuv;
-      document.querySelector(DOMstrings.incomeLabel).textContent =
-        tusuv.totalInc;
+      var type;
+      if (tusuv.tusuv > 0) type = "inc";
+      else type = "exp";
+      document.querySelector(DOMstrings.tusuvLabel).textContent = formatMoney(
+        tusuv.tusuv,
+        type
+      );
+      document.querySelector(DOMstrings.incomeLabel).textContent = formatMoney(
+        tusuv.totalInc,
+        "inc"
+      );
       document.querySelector(DOMstrings.expenseLabel).textContent =
         tusuv.totalExp;
       if (tusuv.huvi !== 0) {
@@ -97,6 +149,15 @@ var financeController = (function () {
     this.id = id;
     this.description = description;
     this.value = value;
+    this.presentage = -1;
+  };
+  Expense.prototype.calcPrecentage = function (totalInc) {
+    if (totalInc > 0)
+      this.presentage = Math.round((this.value / totalInc) * 100);
+    else this.presentage = 0;
+  };
+  Expense.prototype.getPersentage = function () {
+    return this.presentage;
   };
   var calculateTotal = function (type) {
     var sum = 0;
@@ -128,8 +189,21 @@ var financeController = (function () {
       calculateTotal("exp"); // нийт зарлагыг олно
 
       data.tusuv = data.totals.inc - data.totals.exp; // Төсөвийг шинээр тооцоолно
-
-      data.huvi = Math.round((data.totals.exp / data.totals.inc) * 100); // орлого зарлагын хувыг тооцоолно.
+      if (data.totals.inc > 0)
+        data.huvi = Math.round((data.totals.exp / data.totals.inc) * 100);
+      // орлого зарлагын хувыг тооцоолно.
+      else data.huvi = 0;
+    },
+    calculatePersentages: function () {
+      data.items.exp.forEach(function (el) {
+        el.calcPrecentage(data.totals.inc);
+      });
+    },
+    getPersentages: function () {
+      var allPersentages = data.items.exp.map(function (el) {
+        return el.getPersentage();
+      });
+      return allPersentages;
     },
     tusuviigAvah: function () {
       return {
@@ -188,15 +262,25 @@ var appController = (function (uiController, financeController) {
       uiController.addListItem(item, input.type);
       uiController.clearFields();
     }
+    // Tusuviig tootsoolood delgetsend shineer uzuulne.
+    updateTusuv();
+  };
+
+  var updateTusuv = function () {
     //     // 4. Төсөвийг тооцно
     financeController.tusuvTootsooloh();
     //     // 5. Эцэсийн үлдэгдэл
     var tusuv = financeController.tusuviigAvah();
-    // Төсөвийн тооцоог дэлгэцэнд гаргана.
+    // 6.Төсөвийн тооцоог дэлгэцэнд гаргана.
     uiController.tusuviigUzuuleh(tusuv);
-    // console.log();
+    // 7. элментүүдийн хувийг тооцоолно.
+    financeController.calculatePersentages();
+    // 8. Элментүүдийн хувийг хүлээж авна.
+    var allPersentages = financeController.getPersentages();
+    // 9. Эдгээр хувийг дэлгэцэнд гаргана.
+    uiController.displayPrecentages(allPersentages);
+    //console.log(allPersentages);
   };
-
   var setupEventListeners = function () {
     var DOM = uiController.getDOMstrings();
 
@@ -225,6 +309,8 @@ var appController = (function (uiController, financeController) {
           // 2. Delgets deerees elmentiig ustgana
           uiController.deleteListItem(id);
           // 3. Uldegdel tootsoog shinechilj haruulna
+          // Tusuviig tootsoolood delgetsend shineer uzuulne.
+          updateTusuv();
         }
       });
   };
@@ -232,6 +318,7 @@ var appController = (function (uiController, financeController) {
   return {
     init: function () {
       console.log("Application started...");
+      uiController.displayDate();
       uiController.tusuviigUzuuleh({
         tusuv: 0,
         huvi: 0,
