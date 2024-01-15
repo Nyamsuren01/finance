@@ -45,6 +45,20 @@ var uiController = (function () {
         value: parseInt(document.querySelector(DOMstrings.inputValue).value),
       };
     },
+    changeType: function () {
+      var fields = document.querySelectorAll(
+        DOMstrings.inputType +
+          "," +
+          DOMstrings.inputDescription +
+          "," +
+          DOMstrings.inputValue
+      );
+      nodeListForeach(fields, function (el) {
+        el.classList.toggle("red-focus");
+      });
+      document.querySelector(DOMstrings.addBtn).classList.toggle("red");
+    },
+
     displayDate: function () {
       var unuudur = new Date();
       document.querySelector(DOMstrings.dateLabel).textContent =
@@ -283,7 +297,6 @@ var appController = (function (uiController, financeController) {
   };
   var setupEventListeners = function () {
     var DOM = uiController.getDOMstrings();
-
     document.querySelector(DOM.addBtn).addEventListener("click", function () {
       ctrlAddItem();
     });
@@ -293,6 +306,10 @@ var appController = (function (uiController, financeController) {
         ctrlAddItem();
       }
     });
+
+    document
+      .querySelector(DOM.inputType)
+      .addEventListener("change", uiController.changeType);
     document
       .querySelector(DOM.containerDiv)
       .addEventListener("click", function (event) {
